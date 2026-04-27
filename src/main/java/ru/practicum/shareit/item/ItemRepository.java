@@ -1,14 +1,14 @@
 package ru.practicum.shareit.item;
 
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Component;
 import ru.practicum.shareit.item.model.Item;
 
 import java.util.*;
 
-@Repository
+@Component
 public class ItemRepository {
 
-    public final Map<Long, Item> items = new HashMap<>();
+    private final Map<Long, Item> items = new HashMap<>();
 
     public Item addItem(Item item) {
         long id = getNextId();
@@ -37,6 +37,13 @@ public class ItemRepository {
                 .toList();
     }
 
+    public List<Item> searchItem(Long userId, String text) {
+        return getItemsByOwnerId(userId).stream()
+                .filter(item -> item.getName().equalsIgnoreCase(text))
+                .filter(Item::isAvailable)
+                .toList();
+    }
+
     private long getNextId() {
         long currentMaxId = items.keySet()
                 .stream()
@@ -44,12 +51,5 @@ public class ItemRepository {
                 .max()
                 .orElse(0);
         return ++currentMaxId;
-    }
-
-    public List<Item> searchItem(Long userId, String text) {
-        return getItemsByOwnerId(userId).stream()
-                .filter(item -> item.getName().equalsIgnoreCase(text))
-                .filter(Item::isAvailable)
-                .toList();
     }
 }

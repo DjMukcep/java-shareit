@@ -7,6 +7,7 @@ import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.dto.UpdateItemRequest;
 import ru.practicum.shareit.item.model.Item;
+import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserService;
 
 import java.util.List;
@@ -32,9 +33,10 @@ public class ItemServiceImpl implements ItemService {
     }
 
     public ItemDto updateItem(Long userId, Long itemId, UpdateItemRequest request) {
-
+        User storedUser = userService.getUser(userId);
         Item storedItem = itemRepository.getItem(itemId)
-                .filter(item -> item.getOwner() != null && item.getOwner().getId().equals(userId))
+                .filter(item -> item.getOwner() != null
+                        && item.getOwner().getId().equals(storedUser.getId()))
                 .orElseThrow(() -> new NotFoundException("Вещь с id: " + itemId
                         + ", где владелец id: " + userId + " не найдена."));
 
@@ -46,8 +48,11 @@ public class ItemServiceImpl implements ItemService {
     }
 
     public ItemDto getItem(Long userId, Long itemId) {
+        User storedUser = userService.getUser(userId);
+
         return itemRepository.getItem(itemId)
-                .filter(item -> item.getOwner() != null && item.getOwner().getId().equals(userId))
+                .filter(item -> item.getOwner() != null
+                        && item.getOwner().getId().equals(storedUser.getId()))
                 .map(ItemMapper::toItemDto)
                 .orElseThrow(() -> new NotFoundException("Вещь с id: " + itemId
                         + ", где владелец id: " + userId + " не найдена."));
@@ -59,7 +64,10 @@ public class ItemServiceImpl implements ItemService {
     }
 
     public List<ItemDto> searchItem(Long userId, String text) {
-        return ItemMapper.toItemDtoList(itemRepository.searchItem(userId, text));
+        if (text == null || text.isEmpty()) {
+            return List.of();
+        }
 
+        return ItemMapper.toItemDtoList(itemRepository.searchItem(userId, text));
     }
 }
