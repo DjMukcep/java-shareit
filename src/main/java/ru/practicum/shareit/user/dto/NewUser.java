@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
-public class NewUserRequest {
+public class NewUser {
     @NotBlank(message = "Имя пользователя должно быть указано.")
     private String name;
     @Email(message = "Некорректный адрес электронной почты.")

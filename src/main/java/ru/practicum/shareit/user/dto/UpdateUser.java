@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Email;
 import lombok.Data;
 
 @Data
-public class UpdateUserRequest {
+public class UpdateUser {
     private String name;
     @Email
     private String email;

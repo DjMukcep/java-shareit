@@ -21,5 +21,4 @@ public class ItemDto {
     @NotNull(message = "Поле available должно быть инициализировано.")
     @JsonProperty("available")
     private Boolean isAvailable;
-    private Long requestId;
 }
