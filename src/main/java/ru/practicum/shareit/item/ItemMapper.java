@@ -1,6 +1,7 @@
 package ru.practicum.shareit.item;
 
 import lombok.experimental.UtilityClass;
+import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.dto.ItemWithComments;
 import ru.practicum.shareit.item.dto.UpdateItem;
@@ -54,7 +55,7 @@ public class ItemMapper {
             Item item,
             LocalDateTime lastBooking,
             LocalDateTime nextBooking,
-            List<String> comments) {
+            List<CommentDto> comments) {
         return ItemWithComments.builder()
                 .id(item.getId())
                 .name(item.getName())

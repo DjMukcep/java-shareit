@@ -11,15 +11,13 @@ import ru.practicum.shareit.booking.BookingRepository;
 import ru.practicum.shareit.booking.BookingStatus;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.exception.ValidationException;
-import ru.practicum.shareit.item.dto.ItemDto;
-import ru.practicum.shareit.item.dto.ItemWithComments;
-import ru.practicum.shareit.item.dto.NewComment;
-import ru.practicum.shareit.item.dto.UpdateItem;
+import ru.practicum.shareit.item.dto.*;
 import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserService;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -92,7 +90,7 @@ public class ItemServiceImpl implements ItemService {
 
         Item item = getItem(itemId);
 
-        List<String> comments = getComments(itemId);
+        List<CommentDto> comments = getComments(itemId);
 
         if (item.getOwner().getId().equals(userId)) {
             last = getLastBooking(itemId);
@@ -102,11 +100,11 @@ public class ItemServiceImpl implements ItemService {
         return ItemMapper.toItemWithComments(item, last, next, comments);
     }
 
-    private List<String> getComments(Long itemId) {
+    private List<CommentDto> getComments(Long itemId) {
         return commentRepository.findAllByItemId(itemId)
                 .stream()
-                .map(Comment::getText)
-                .collect(Collectors.toList());
+                .map(CommentMapper::toCommentDto)
+                .toList();
     }
 
     private LocalDateTime getLastBooking(Long itemId) {
@@ -133,7 +131,7 @@ public class ItemServiceImpl implements ItemService {
         LocalDateTime now = LocalDateTime.now();
 
         Map<Long, Item> items = getItemsMap(userId);
-        Map<Long, List<String>> comments = getCommentsMap(userId);
+        Map<Long, List<CommentDto>> comments = getCommentsMap(userId);
         Map<Long, LocalDateTime> lastDateBookings = getLastDateBookings(userId, now);
         Map<Long, LocalDateTime> nextBooking = getNextDateBookings(userId, now);
 
@@ -153,12 +151,18 @@ public class ItemServiceImpl implements ItemService {
                 .collect(Collectors.toMap(Item::getId, Function.identity()));
     }
 
-    private Map<Long, List<String>> getCommentsMap(Long userId) {
+    private Map<Long, List<CommentDto>> getCommentsMap(Long userId) {
         return commentRepository.findAllByItemOwnerId(userId)
                 .stream()
-                .collect(
-                        Collectors.groupingBy(comment -> comment.getItem().getId(),
-                                Collectors.mapping(Comment::getText, Collectors.toList())
+                .collect(Collectors.groupingBy(
+                        comment -> comment.getItem().getId(),
+                        Collectors.collectingAndThen(
+                                Collectors.toList(),
+                                list -> list.stream()
+                                        .sorted(Comparator.comparing(Comment::getCreated))
+                                        .map(CommentMapper::toCommentDto)
+                                        .toList()
+                                )
                         )
                 );
     }

@@ -15,6 +15,7 @@ import ru.practicum.shareit.user.UserService;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 
 @Service
@@ -39,6 +40,8 @@ public class BookingServiceImpl implements BookingService {
         }
 
         Booking booking = BookingMapper.toBooking(booker, item, newBooking);
+        validateBooking(booking);
+
         Booking storedBooking = bookingRepository.save(booking);
         log.info("Новый запрос на бронирование id:{}, статус:{} время:{}",
                 storedBooking.getId(), storedBooking.getStatus(), storedBooking.getStart());
@@ -51,6 +54,13 @@ public class BookingServiceImpl implements BookingService {
     public Booking updateBooking(Long ownerId, Long bookingId, boolean isApproved) {
         Booking booking = getBookingWithItemAndBooker(bookingId);
         Item item = booking.getItem();
+
+        if (booking.getStatus() != BookingStatus.WAITING) {
+            throw new ValidationException(
+                    String.format("Невозможно обновить бронирование, " +
+                                    "так как статус бронирования был уже изменен на %S.",
+                            booking.getStatus()));
+        }
 
         validateItemUpdate(item, ownerId);
         booking.setStatus(isApproved ? BookingStatus.APPROVED : BookingStatus.REJECTED);
@@ -78,27 +88,34 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public List<Booking> getBookerBookings(Long userId, String state) {
         checkUserExists(userId);
+        BookingState bookingState;
 
-        switch (state.toUpperCase()) {
-            case "REJECTED", "WAITING" -> {
+        try {
+            bookingState = BookingState.valueOf(state.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new ValidationException("Статус не поддерживается: " + state);
+        }
+
+        switch (bookingState) {
+            case REJECTED, WAITING -> {
                 return bookingRepository.findAllByBookerIdAndStatusOrderByStartDesc(
-                        userId, BookingStatus.valueOf(state));
+                        userId, BookingStatus.valueOf(bookingState.name()));
             }
-            case "PAST" -> {
+            case PAST -> {
                 return bookingRepository.findAllByBookerIdAndEndBeforeOrderByStartDesc(
                         userId, LocalDateTime.now());
             }
-            case "FUTURE" -> {
+            case FUTURE -> {
                 return bookingRepository.findAllByBookerIdAndStartAfterOrderByStartDesc(
                         userId, LocalDateTime.now());
             }
-            case "CURRENT" -> {
+            case CURRENT -> {
                 LocalDateTime now = LocalDateTime.now();
                 return bookingRepository
                         .findAllByBookerIdAndStartBeforeAndEndAfterOrderByStartDesc(
                                 userId, now, now);
             }
-            case "ALL" -> {
+            case ALL -> {
                 return bookingRepository.findAllByBookerIdOrderByStartDesc(userId);
             }
             default -> throw new ValidationException("Статус не поддерживается: " + state);
@@ -108,30 +125,37 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public List<Booking> getOwnerBookings(Long userId, String state) {
         checkUserExists(userId);
+        BookingState bookingState;
 
         if (itemService.getItems(userId).isEmpty()) {
             return List.of();
         }
 
-        switch (state.toUpperCase()) {
-            case "REJECTED", "WAITING" -> {
+        try {
+            bookingState = BookingState.valueOf(state.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new ValidationException("Статус не поддерживается: " + state);
+        }
+
+        switch (bookingState) {
+            case REJECTED, WAITING -> {
                 return bookingRepository.findAllByItemOwnerIdAndStatusOrderByStartDesc(
-                        userId, BookingStatus.valueOf(state));
+                        userId, BookingStatus.valueOf(bookingState.name()));
             }
-            case "PAST" -> {
+            case PAST -> {
                 return bookingRepository.findAllByItemOwnerIdAndEndBeforeOrderByStartDesc(
                         userId, LocalDateTime.now());
             }
-            case "FUTURE" -> {
+            case FUTURE -> {
                 return bookingRepository.findAllByItemOwnerIdAndStartAfterOrderByStartDesc(
                         userId, LocalDateTime.now());
             }
-            case "CURRENT" -> {
+            case CURRENT -> {
                 LocalDateTime now = LocalDateTime.now();
                 return bookingRepository.findAllByItemOwnerIdAndStartBeforeAndEndAfterOrderByStartDesc(
                         userId, now, now);
             }
-            case "ALL" -> {
+            case ALL -> {
                 return bookingRepository.findAllByItemOwnerIdOrderByStartDesc(userId);
             }
             default -> throw new ValidationException("Статус не поддерживаатся: " + state);
@@ -168,5 +192,29 @@ public class BookingServiceImpl implements BookingService {
                             ownerId, item.getId())
             );
         }
+    }
+
+    private void validateBooking(Booking booking) {
+        if (booking.getStart().isAfter(booking.getEnd())) {
+            throw new ValidationException(
+                    String.format("Не верный промежуток времени начала:%s, " +
+                            "завершения бронирования:%s", booking.getStart(), booking.getEnd())
+            );
+        }
+        if (booking.getBooker().equals(booking.getItem().getOwner())) {
+            throw new ValidationException(
+                    String.format("Арендатор этой вещи id:%d является ее владельцем id:%d",
+                            booking.getItem().getId(), booking.getBooker().getId()));
+        }
+
+        boolean isOverLapped = bookingRepository.hasOverlappingBookings(
+                booking.getItem().getId(), BookingStatus.APPROVED, booking.getStart(), booking.getEnd());
+
+        if (isOverLapped) {
+            throw new ValidationException(
+                    String.format("Промежуток времени от %s до %s уже занят.",
+                            booking.getStart(), booking.getEnd()));
+        }
+
     }
 }
