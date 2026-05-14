@@ -1,10 +1,12 @@
 package ru.practicum.shareit.item;
 
 import lombok.experimental.UtilityClass;
+import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
-import ru.practicum.shareit.item.dto.UpdateItemRequest;
-import ru.practicum.shareit.item.model.Item;
+import ru.practicum.shareit.item.dto.ItemWithComments;
+import ru.practicum.shareit.item.dto.UpdateItem;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @UtilityClass
@@ -15,11 +17,15 @@ public class ItemMapper {
                 item.getId(),
                 item.getName(),
                 item.getDescription(),
-                item.isAvailable(),
-                item.getRequest() != null ? item.getRequest().getId() : null);
+                item.isAvailable()
+        );
     }
 
-    public static Item mapToItem(ItemDto itemDto) {
+    public static List<ItemDto> toItemDto(List<Item> items) {
+        return items.stream().map(ItemMapper::toItemDto).toList();
+    }
+
+    public static Item toItem(ItemDto itemDto) {
         Item item = new Item();
 
         item.setName(itemDto.getName());
@@ -29,7 +35,7 @@ public class ItemMapper {
         return item;
     }
 
-    public static Item updateItemFields(Item item, UpdateItemRequest request) {
+    public static Item updateItemFields(Item item, UpdateItem request) {
         if (request.hasItemName()) {
             item.setName(request.getName());
         }
@@ -45,7 +51,19 @@ public class ItemMapper {
         return item;
     }
 
-    public static List<ItemDto> toItemDtoList(List<Item> items) {
-        return items.stream().map(ItemMapper::toItemDto).toList();
+    public static ItemWithComments toItemWithComments(
+            Item item,
+            LocalDateTime lastBooking,
+            LocalDateTime nextBooking,
+            List<CommentDto> comments) {
+        return ItemWithComments.builder()
+                .id(item.getId())
+                .name(item.getName())
+                .description(item.getDescription())
+                .isAvailable(item.isAvailable())
+                .lastBooking(lastBooking)
+                .nextBooking(nextBooking)
+                .comments(comments)
+                .build();
     }
 }

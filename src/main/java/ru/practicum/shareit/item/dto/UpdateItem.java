@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 @Data
-public class UpdateItemRequest {
+public class UpdateItem {
     private String name;
     private String description;
 
