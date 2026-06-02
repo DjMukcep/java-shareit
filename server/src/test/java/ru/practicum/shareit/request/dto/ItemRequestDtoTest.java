@@ -46,7 +46,7 @@ class ItemRequestDtoTest {
         assertThat(result).extractingJsonPathStringValue("@.created")
                 .isEqualTo("2020-06-06T10:11:12");
         assertThat(result.getJson()).doesNotContain("123456789");
-        assertThat(result).extractingJsonPathNumberValue("@.items[0].itemId")
+        assertThat(result).extractingJsonPathNumberValue("@.items[0].id")
                 .isEqualTo(10);
         assertThat(result).extractingJsonPathStringValue("@.items[0].name")
                 .isEqualTo("item");

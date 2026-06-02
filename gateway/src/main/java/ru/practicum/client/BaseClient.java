@@ -74,7 +74,7 @@ public class BaseClient {
             }
         } catch (HttpStatusCodeException e) {
             // Вместо мгновенного return собираем ResponseEntity и кладем в переменную
-            shareitServerResponse = ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsByteArray());
+            shareitServerResponse = ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());
         }
         return prepareGatewayResponse(shareitServerResponse);
     }

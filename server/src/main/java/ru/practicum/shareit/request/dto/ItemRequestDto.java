@@ -27,10 +27,8 @@ public class ItemRequestDto {
     @Data
     @AllArgsConstructor
     public static class Item {
-        private Long itemId;
-
-        @JsonProperty("name")
-        private String itemName;
+        private Long id;
+        private String name;
         private Long ownerId;
     }
 }

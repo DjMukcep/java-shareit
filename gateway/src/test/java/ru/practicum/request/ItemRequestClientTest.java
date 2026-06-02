@@ -12,8 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.client.MockRestServiceServer;
 import ru.practicum.request.dto.NewItemRequest;
 
-import java.nio.charset.StandardCharsets;
-
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
@@ -74,10 +72,8 @@ class ItemRequestClientTest {
         ResponseEntity<Object> response = itemRequestClient.addRequest(userId, request);
 
         assertNotNull(response.getBody());
-        String responseBodyText = new String((byte[]) response.getBody(), StandardCharsets.UTF_8);
-
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        assertTrue(responseBodyText.contains("Пользователь с id:999 не найден"));
+        assertTrue(response.getBody().toString().contains("Пользователь с id:999 не найден"));
         mockServer.verify();
     }
 

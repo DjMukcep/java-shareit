@@ -11,6 +11,10 @@ import ru.practicum.shareit.booking.BookingRepository;
 import ru.practicum.shareit.booking.BookingStatus;
 import ru.practicum.shareit.exception.ValidationException;
 import ru.practicum.shareit.item.dto.*;
+import ru.practicum.shareit.request.ItemRequest;
+import ru.practicum.shareit.request.ItemRequestMapper;
+import ru.practicum.shareit.request.ItemRequestRepository;
+import ru.practicum.shareit.request.dto.NewItemRequest;
 import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserRepository;
 
@@ -39,6 +43,9 @@ class ItemServiceImplTest {
     @Autowired
     private CommentRepository commentRepository;
 
+    @Autowired
+    private ItemRequestRepository itemRequestRepository;
+
     @Test
     @Transactional
     @DisplayName("Добавить вещь: успешное сохранение вещи в базу.")
@@ -66,6 +73,35 @@ class ItemServiceImplTest {
         assertNull(item.getRequest());
         assertEquals("user name", item.getOwner().getName());
         assertEquals("user@email.com", item.getOwner().getEmail());
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("Добавить вещь: вернуть 400 - попытка создать вещь для соственного запроса.")
+    void addItem_whenRequesterIsOwner_thenThrowValidationException() {
+        User user = new User();
+        user.setName("user name");
+        user.setEmail("user@email.com");
+        user = userRepository.save(user);
+        Long userId = user.getId();
+
+        NewItemRequest request = new NewItemRequest("some item");
+        ItemRequest itemRequest = ItemRequestMapper.toItemRequest(request, user);
+        itemRequest =  itemRequestRepository.save(itemRequest);
+
+        NewItem newItem = new NewItem(
+                "some item",
+                "desc",
+                true,
+                itemRequest.getId()
+        );
+        long countBefore = itemRepository.count();
+
+        ValidationException exception = assertThrows(ValidationException.class,
+                () -> itemService.addItem(userId, newItem));
+
+        assertEquals("Нельзя создавать вещь для собственного запроса.", exception.getMessage());
+        assertEquals(countBefore, itemRepository.count());
     }
 
     @Test

@@ -3,6 +3,7 @@ package ru.practicum.shareit.request;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.Item;
 import ru.practicum.shareit.item.ItemRepository;
@@ -12,12 +13,12 @@ import ru.practicum.shareit.request.dto.RequestDto;
 import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserService;
 
-import java.util.Comparator;
 import java.util.List;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ItemRequestServiceImpl implements ItemRequestService {
 
     private final ItemRequestRepository itemRequestRepository;
@@ -25,6 +26,7 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     private final UserService userService;
 
     @Override
+    @Transactional
     public RequestDto addRequest(NewItemRequest newRequest, Long userId) {
         User requester = userService.getUser(userId);
         ItemRequest itemRequest = ItemRequestMapper.toItemRequest(newRequest, requester);
@@ -54,22 +56,19 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     @Override
     public List<RequestDto> getRequests(Long userId) {
         checkUserExists(userId);
-        List<ItemRequest> itemRequests = itemRequestRepository.findAll();
+        List<ItemRequest> itemRequests = itemRequestRepository.findAllByRequesterIdNotOrderByCreatedAtDesc(userId);
 
         return itemRequests.stream()
-                .filter(itemRequest -> !itemRequest.getRequester().getId().equals(userId))
-                .map(itemRequest -> new RequestDto(
-                        itemRequest.getId(),
-                        itemRequest.getDescription(),
-                        itemRequest.getCreatedAt()))
-                .sorted(Comparator.comparing(RequestDto::getCreatedAt).reversed())
+                .map(ItemRequestMapper::toRequestDto)
                 .toList();
     }
 
     @Override
     public List<ItemRequestDto> getUserRequests(Long userId) {
+        checkUserExists(userId);
         List<ItemRequest> requests = itemRequestRepository.findAllByRequesterIdOrderByCreatedAtDesc(userId);
         List<Item> items = itemRepository.findAllByRequestRequesterId(userId);
+
         return ItemRequestMapper.toItemRequestDto(requests, items);
     }
 

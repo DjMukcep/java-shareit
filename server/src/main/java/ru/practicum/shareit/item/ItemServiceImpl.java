@@ -47,6 +47,12 @@ public class ItemServiceImpl implements ItemService {
                itemRequestService.getRequest(newItem.getRequestId()) : null;
         User owner = userService.getUser(userId);
 
+        if (request != null &&
+                request.getRequester().getId().equals(owner.getId())) {
+            throw new ValidationException(
+                    "Нельзя создавать вещь для собственного запроса.");
+        }
+
         Item item = ItemMapper.toItem(newItem, request, owner);
 
 
